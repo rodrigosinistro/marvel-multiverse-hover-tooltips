@@ -33,4 +33,4 @@ A lightweight module for **Foundry VTT 13** that adds rich tooltips when you hov
 MIT License.
 
 Link para o Manifest:
-https://raw.githubusercontent.com/seuusuario/marvel-multiverse-hover-tooltips/main/module.json
+https://raw.githubusercontent.com/rodrigosinistro/marvel-multiverse-hover-tooltips/main/module.json
