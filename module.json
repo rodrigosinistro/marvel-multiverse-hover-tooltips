@@ -1,0 +1,44 @@
+{
+  "id": "marvel-multiverse-hover-tooltips",
+  "title": "Marvel Multiverse – Hover Tooltips",
+  "description": "Tooltips on hover for Items (description + range), and for Occupations, Origins, Tags, Traits, and Powers (with extra fields). Built for Foundry VTT 13 and the Marvel Multiverse RPG system.",
+  "version": "1.0.10",
+  "compatibility": {
+    "minimum": "11",
+    "verified": "13",
+    "maximum": "13"
+  },
+  "authors": [
+    {
+      "name": "ChatGPT (GPT-5 Thinking)"
+    }
+  ],
+  "url": "https://example.com/",
+  "license": "MIT",
+  "readme": "README.md",
+  "minimumCoreVersion": "11",
+  "esmodules": [
+    "scripts/hover-tooltips.js"
+  ],
+  "styles": [
+    "styles/hover-tooltips.css"
+  ],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    },
+    {
+      "lang": "pt-BR",
+      "name": "Português (Brasil)",
+      "path": "lang/pt-BR.json"
+    }
+  ],
+  "flags": {
+    "mmHoverTooltips": {
+      "system": "marvel-multiverse"
+    }
+  },
+  "manifestPlusVersion": 2
+}
