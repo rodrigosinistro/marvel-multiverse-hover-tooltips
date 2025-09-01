@@ -1,0 +1,18 @@
+{
+  "MMHT.Settings.Enable": "Ativar tooltips ao passar o mouse",
+  "MMHT.Settings.SystemId": "ID do sistema alvo",
+  "MMHT.Settings.Types": "Ativar tipos",
+  "MMHT.Settings.Types.Power": "Poderes",
+  "MMHT.Settings.Types.Trait": "Traits",
+  "MMHT.Settings.Types.Tag": "Tags",
+  "MMHT.Settings.Types.Occupation": "Ocupações",
+  "MMHT.Settings.Types.Origin": "Origens",
+  "MMHT.Settings.Types.Item": "Itens genéricos",
+  "MMHT.Tooltip.Action": "Ação",
+  "MMHT.Tooltip.Trigger": "Gatilho",
+  "MMHT.Tooltip.Duration": "Duração",
+  "MMHT.Tooltip.Cost": "Custo",
+  "MMHT.Tooltip.Range": "Alcance",
+  "MMHT.Tooltip.Effect": "Efeito",
+  "MMHT.Tooltip.Description": "Descrição"
+}
