@@ -31,3 +31,6 @@ A lightweight module for **Foundry VTT 13** that adds rich tooltips when you hov
 - Designed for the **marvel-multiverse** system id. If your system id differs, you can override it via a world setting.
 
 MIT License.
+
+Link para o Manifest:
+https://raw.githubusercontent.com/seuusuario/marvel-multiverse-hover-tooltips/main/module.json
