@@ -1,249 +1,237 @@
-// Marvel Multiverse – Hover Tooltips
-// Foundry VTT v13 compatible
-
 const MODULE_ID = "marvel-multiverse-hover-tooltips";
-const MODULE_VER = "1.0.3";
-const DEFAULT_SYSTEM_ID = "marvel-multiverse";
+const MODULE_VER = "1.0.17";
+const SETTINGS = { ENABLE:"enable", SYSTEM_ID:"systemId", TYPES:"types" };
 
-const SETTINGS = {
-  ENABLED: "enabled",
-  SYSTEM_ID: "systemId",
-  TYPES: "types"
-};
+const DEFAULT_TYPES = { Power:true, Trait:true, Tag:true, Occupation:true, Origin:true, Item:true };
 
-const DEFAULT_TYPES = {
-  power: true,
-  trait: true,
-  tag: true,
-  occupation: true,
-  origin: true,
-  item: true
-};
+class MMHT {
+  static _enabled = false;
+  static _types = foundry.utils.deepClone(DEFAULT_TYPES);
+  static _targetSystemId = "marvel-multiverse";
+  static _tooltipEl = null;
+  static _moveHandler = null;
 
-Hooks.once("init", function() {
-  game.settings.register(MODULE_ID, SETTINGS.ENABLED, {
-    name: game.i18n.localize("MMHT.Settings.Enable"),
-    scope: "world",
-    config: true,
-    type: Boolean,
-    default: true
-  });
+  static log(...args){ console.log(`[MMHT] v${MODULE_VER}`, ...args); }
+  static warn(...args){ console.warn("[MMHT]", ...args); }
+  static error(...args){ console.error("[MMHT]", ...args); }
 
-  game.settings.register(MODULE_ID, SETTINGS.SYSTEM_ID, {
-    name: game.i18n.localize("MMHT.Settings.SystemId"),
-    scope: "world",
-    config: true,
-    type: String,
-    default: DEFAULT_SYSTEM_ID
-  });
+  static init(){
+    game.settings.register(MODULE_ID, SETTINGS.ENABLE, {
+      name: game.i18n.localize("MMHT.Settings.Enable"),
+      scope: "world", config: true, type: Boolean, default: true,
+      onChange: v => MMHT._enabled = !!v
+    });
+    game.settings.register(MODULE_ID, SETTINGS.SYSTEM_ID, {
+      name: game.i18n.localize("MMHT.Settings.SystemId"),
+      scope: "world", config: true, type: String, default: MMHT._targetSystemId,
+      onChange: v => MMHT._targetSystemId = String(v||"").trim()
+    });
+    game.settings.register(MODULE_ID, SETTINGS.TYPES, {
+      name: game.i18n.localize("MMHT.Settings.TypesLabel"),
+      scope: "world", config: true, type: Object, default: DEFAULT_TYPES,
+      onChange: v => MMHT._types = v ?? DEFAULT_TYPES
+    });
+  }
 
-  game.settings.register(MODULE_ID, SETTINGS.TYPES, {
-    name: game.i18n.localize("MMHT.Settings.Types"),
-    scope: "world",
-    config: true,
-    type: Object,
-    default: DEFAULT_TYPES,
-    onChange: v => { MMHT._types = v; }
-  });
-});
-
-Hooks.once("ready", async function() {
-  console.log(`[MMHT] v${MODULE_VER} ready`);
-  MMHT.init();
-});
-
-const MMHT = {
-  _cleanParagraphs(html) { return String(html).replace(/<\/?p>/g, '').trim(); },
-
-  _tooltipEl: null,
-  _moveHandler: null,
-  _types: null,
-
-  init() {
-    const enabled = game.settings.get(MODULE_ID, SETTINGS.ENABLED);
-    if (!enabled) return;
-
-    this._types = foundry.utils.duplicate(game.settings.get(MODULE_ID, SETTINGS.TYPES) || DEFAULT_TYPES);
-
-    const targetSystemId = game.settings.get(MODULE_ID, SETTINGS.SYSTEM_ID) || DEFAULT_SYSTEM_ID;
-    if (game.system.id !== targetSystemId) {
-      console.warn(`[${MODULE_ID}] System id mismatch. Current: ${game.system.id} / Target: ${targetSystemId}. Tooltips inactive.`);
+  static ready(){
+    MMHT._enabled = !!game.settings.get(MODULE_ID, SETTINGS.ENABLE);
+    MMHT._targetSystemId = String(game.settings.get(MODULE_ID, SETTINGS.SYSTEM_ID) || "").trim() || "marvel-multiverse";
+    MMHT._types = foundry.utils.mergeObject(DEFAULT_TYPES, game.settings.get(MODULE_ID, SETTINGS.TYPES) || {}, {inplace:false});
+    if (game.system.id !== MMHT._targetSystemId) {
+      MMHT.warn(`System id mismatch. Current: ${game.system.id} / Target: ${MMHT._targetSystemId}. Tooltips inactive.`);
       return;
     }
+    if (!MMHT._enabled) return;
 
-    this._createTooltip();
-    this._bindGlobal();
-    Hooks.on("renderActorSheet", (app, html, data) => this._bindActorSheet(app, html, data));
-    Hooks.on("renderItemDirectory", (app, html, data) => this._bindItemDirectory(app, html));
-    Hooks.on("renderCompendium", (app, html) => this._bindCompendium(app, html));
-  },
+    MMHT._createTooltipElement();
+    MMHT._bindGlobal();
+    MMHT._bindDelegates();
+    MMHT._installHooks();
 
-  _createTooltip() {
-    if (this._tooltipEl) return;
-    const el = document.createElement("div");
-    el.className = "mmht-tooltip mmht-hidden";
-    el.dataset.mmhtVersion = MODULE_VER;
-    el.style.position = "fixed";
-    el.style.bottom = "auto";
-    el.style.right = "auto";
-    el.style.pointerEvents = "none";
-    el.style.zIndex = 10000;
-    document.body.appendChild(el);
-    this._tooltipEl = el;
-  },
-
-  _bindGlobal() {
-    document.addEventListener("keydown", (ev) => {
-      if (ev.key === "Escape") this._hide();
-    });
-  },
-
-  _bindActorSheet(app, html) {
-    const $el = html instanceof jQuery ? html : $(html);
-
-    $el.on("mouseenter", "li.item[data-item-id], .item[data-item-id]", async (ev) => {
-      const li = ev.currentTarget;
-      const itemId = li.dataset.itemId;
-      if (!itemId) return;
-      const item = app.actor?.items?.get(itemId);
-      if (!item) return;
-      await this._showForItem(ev, item);
-    });
-
-    $el.on("mouseleave", "li.item[data-item-id], .item[data-item-id]", () => this._hide());
-  },
-
-  _bindItemDirectory(app, html) {
-    const $el = html instanceof jQuery ? html : $(html);
-    $el.on("mouseenter", 'li.document[data-document-id][data-document-type="Item"]', async (ev) => {
-      const itemId = ev.currentTarget.dataset.documentId;
-      const item = game.items?.get(itemId);
-      if (!item) return;
-      await this._showForItem(ev, item);
-    });
-    $el.on("mouseleave", 'li.document[data-document-id][data-document-type="Item"]', () => this._hide());
-  },
-
-  _bindCompendium(app, html) {
-    if (app.collection?.documentName !== "Item") return;
-    const $el = html instanceof jQuery ? html : $(html);
-    $el.on("mouseenter", "li.directory-item.document[data-document-id]", async (ev) => {
-      const docId = ev.currentTarget.dataset.documentId;
-      if (!docId) return;
-      const item = await app.collection?.getDocument(docId);
-      if (!item) return;
-      await this._showForItem(ev, item);
-    });
-    $el.on("mouseleave", "li.directory-item.document[data-document-id]", () => this._hide());
-  },
-
-  async _showForItem(ev, item) {
-    const type = String(item.type || "").toLowerCase();
-    const allowed =
-      (type === "power" && this._types.power) ||
-      (type === "trait" && this._types.trait) ||
-      (type === "tag" && this._types.tag) ||
-      (type === "occupation" && this._types.occupation) ||
-      (type === "origin" && this._types.origin) ||
-      (this._types.item);
-
-    if (!allowed) return;
-
-    const html = await this._buildTooltipHTML(item);
-    if (!html) return;
-
-    this._tooltipEl.innerHTML = html;
-    this._tooltipEl.classList.remove("mmht-hidden");
-
-    const move = (e) => {
-      // ALWAYS above-right of cursor, with viewport clamping (no flipping)
-      const rect = this._tooltipEl.getBoundingClientRect();
-      let x = e.clientX + 12;
-      let y = e.clientY - rect.height - 12;
-
-      const maxX = window.innerWidth - rect.width - 8;
-      if (x > maxX) x = maxX;
-      if (x < 8) x = 8;
-      if (y < 8) y = 8;
-
-      this._tooltipEl.style.left = x + "px";
-      this._tooltipEl.style.top = y + "px";
-      this._tooltipEl.style.bottom = "auto";
-      this._tooltipEl.style.right = "auto";
-    };
-    this._moveHandler = move;
-    document.addEventListener("mousemove", move);
-    move(ev); // initial position
-  },
-
-  _hide() {
-    if (!this._tooltipEl) return;
-    this._tooltipEl.classList.add("mmht-hidden");
-    this._tooltipEl.innerHTML = "";
-    if (this._moveHandler) {
-      document.removeEventListener("mousemove", this._moveHandler);
-      this._moveHandler = null;
-    }
-  },
-
-  _label(key) {
-    try {
-      const localized = game.i18n?.localize?.(key);
-      if (localized && localized !== key) return localized;
-    } catch (e) {}
-    const last = (key?.split?.(".")?.pop?.() ?? key ?? "").toString();
-    return last.replace(/([A-Z])/g, " $1").replace(/^./, s => s.toUpperCase()).trim();
-  },
-
-  async _buildTooltipHTML(item) {
-    const sys = item.system ?? {};
-    const type = String(item.type || "").toLowerCase();
-
-    const get = (paths, fallback = "") => {
-      for (const p of paths) {
-        const v = foundry.utils.getProperty(sys, p);
-        if (v !== undefined && v !== null && String(v).trim() !== "") return v;
-      }
-      return fallback;
-    };
-
-    const description = get(["description", "details.description", "system.description", "desc"]);
-    const range = get(["range", "details.range"]);
-    const action = get(["action", "details.action"]);
-    const trigger = get(["trigger", "details.trigger"]);
-    const duration = get(["duration", "details.duration"]);
-    const cost = get(["cost", "details.cost"]);
-    const effect = get(["effect", "details.effect", "effectsText"]);
-
-    const title = foundry.utils.escapeHTML(item.name ?? "—");
-
-    let rows = [];
-    if (type === "power") {
-      const blocks = [
-        ["MMHT.Tooltip.Description", description, true],
-        ["MMHT.Tooltip.Action", action],
-        ["MMHT.Tooltip.Trigger", trigger],
-        ["MMHT.Tooltip.Duration", duration],
-        ["MMHT.Tooltip.Cost", cost],
-        ["MMHT.Tooltip.Effect", effect, true],
-        ["MMHT.Tooltip.Range", range]
-      ];
-      for (const [labelKey, value, rich] of blocks) {
-        if (!value) continue;
-        const label = MMHT._label(labelKey);
-        const content = rich ? MMHT._cleanParagraphs(await TextEditor.enrichHTML(String(value), { async: true })) : foundry.utils.escapeHTML(String(value));
-        rows.push(`<div class="mmht-row"><div class="mmht-label">${label}</div><div class="mmht-desc">${content}</div></div>`);
-      }
-    } else {
-      if (description) {
-        const descHTML = await TextEditor.enrichHTML(String(description), { async: true });
-        rows.push(`<div class="mmht-row"><div class="mmht-label">${MMHT._label("MMHT.Tooltip.Description")}</div><div class="mmht-desc">${descHTML}</div></div>`);
-      }
-      if (range) {
-        rows.push(`<div class="mmht-row"><div class="mmht-label">${MMHT._label("MMHT.Tooltip.Range")}</div><div class="mmht-desc">${foundry.utils.escapeHTML(String(range))}</div></div>`);
-      }
-    }
-    if (!rows.length) return "";
-    return `<h3>${title}</h3>${rows.join("")}`;
+    MMHT.log("ready");
   }
-};
+
+  static _installHooks(){
+    const upFirst = s => !s ? "" : (s.charAt(0).toUpperCase()+s.slice(1));
+
+    Hooks.on("renderActorSheet", (app, html) => {
+      try {
+        html.find("[data-item-id]").each((i, el) => {
+          const id = el.dataset.itemId;
+          const item = app?.actor?.items?.get?.(id);
+          if (!item) return;
+
+          const sys = item.system ?? {};
+          const type = upFirst(item.type || "Item");
+          const title = item.name ?? "";
+
+          const cost = sys?.cost?.value ?? sys?.cost ?? "";
+          const range = sys?.range ?? sys?.distance ?? "";
+          const action = sys?.action ?? sys?.activation ?? "";
+          const trigger = sys?.trigger ?? "";
+          const duration = sys?.duration ?? "";
+          const desc = sys?.description ?? sys?.desc ?? sys?.details ?? "";
+          const effect = sys?.effect ?? sys?.effects ?? "";
+
+          el.dataset.mmhtType = type;
+          el.dataset.mmhtTitle = title;
+          if (cost) el.dataset.mmhtCost = String(cost);
+          if (range) el.dataset.mmhtRange = String(range);
+          if (action) el.dataset.mmhtAction = String(action);
+          if (trigger) el.dataset.mmhtTrigger = String(trigger);
+          if (duration) el.dataset.mmhtDuration = String(duration);
+          if (desc) el.dataset.mmhtDesc = String(desc);
+          if (effect) el.dataset.mmhtEffect = (typeof effect === "string") ? effect : JSON.stringify(effect);
+        });
+      } catch (e) { MMHT.warn("renderActorSheet patch failed", e); }
+    });
+
+    Hooks.on("renderChatMessage", (message, html) => {
+      try {
+        html.find("[data-item-id]").each((i, el) => {
+          const id = el.dataset.itemId;
+          const actor = message.speaker?.actor ? game.actors?.get(message.speaker.actor) : null;
+          const item = actor?.items?.get?.(id);
+          if (!item) return;
+
+          const sys = item.system ?? {};
+          const type = upFirst(item.type || "Item");
+
+          el.dataset.mmhtType = type;
+          el.dataset.mmhtTitle = item.name ?? "";
+          const cost = sys?.cost?.value ?? sys?.cost ?? "";
+          const range = sys?.range ?? sys?.distance ?? "";
+          const action = sys?.action ?? sys?.activation ?? "";
+          const trigger = sys?.trigger ?? "";
+          const duration = sys?.duration ?? "";
+          const desc = sys?.description ?? sys?.desc ?? sys?.details ?? "";
+          const effect = sys?.effect ?? sys?.effects ?? "";
+
+          if (cost) el.dataset.mmhtCost = String(cost);
+          if (range) el.dataset.mmhtRange = String(range);
+          if (action) el.dataset.mmhtAction = String(action);
+          if (trigger) el.dataset.mmhtTrigger = String(trigger);
+          if (duration) el.dataset.mmhtDuration = String(duration);
+          if (desc) el.dataset.mmhtDesc = String(desc);
+          if (effect) el.dataset.mmhtEffect = (typeof effect === "string") ? effect : JSON.stringify(effect);
+        });
+      } catch (e) { MMHT.warn("renderChatMessage patch failed", e); }
+    });
+  }
+
+  static _createTooltipElement(){
+    if (MMHT._tooltipEl) MMHT._tooltipEl.remove();
+    const el = document.createElement("div");
+    el.classList.add("mmht-tooltip");
+    el.style.position = "fixed";
+    el.style.pointerEvents = "none";
+    el.style.zIndex = "9999";
+    el.style.maxWidth = "520px";
+    el.style.padding = "10px 12px";
+    el.style.borderRadius = "12px";
+    el.style.boxShadow = "0 8px 22px rgba(0,0,0,0.35)";
+    el.style.background = "rgba(18,18,20,0.95)";
+    el.style.color = "var(--color-text-light-1, #eee)";
+    el.style.fontSize = "14px";
+    el.style.lineHeight = "1.35";
+    el.style.display = "none";
+    document.body.appendChild(el);
+    MMHT._tooltipEl = el;
+  }
+
+  static _bindGlobal(){
+    const move = (ev) => {
+      if (!MMHT._tooltipEl || MMHT._tooltipEl.style.display === "none") return;
+      const pad = 14;
+      let x = ev.clientX + pad;
+      let y = ev.clientY + pad;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const rect = MMHT._tooltipEl.getBoundingClientRect();
+      if (x + rect.width + 12 > vw) x = ev.clientX - rect.width - pad;
+      if (y + rect.height + 12 > vh) y = ev.clientY - rect.height - pad;
+      MMHT._tooltipEl.style.transform = `translate(${Math.max(4, x)}px, ${Math.max(4, y)}px)`;
+    };
+    let ticking = false;
+    MMHT._moveHandler = (ev) => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => { move(ev); ticking = false; });
+    };
+    document.addEventListener("mousemove", MMHT._moveHandler);
+  }
+
+  static _bindDelegates(){
+    document.addEventListener("mouseover", MMHT._onHover, true);
+    document.addEventListener("mouseout", MMHT._onOut, true);
+  }
+
+  static _htmlToText(html){
+    if (!html) return "";
+    try {
+      const tmp = document.createElement("div");
+      tmp.innerHTML = html;
+      return (tmp.textContent || "").trim();
+    } catch(e){ return String(html); }
+  }
+
+  static _onHover(ev){
+    const t = ev.target;
+    if (!(t instanceof HTMLElement)) return;
+
+    const type = t.dataset.mmhtType;
+    if (!type || MMHT._types[type] !== true) return;
+
+    const title = foundry.utils.escapeHTML(t.dataset.mmhtTitle || "");
+    const range = foundry.utils.escapeHTML(t.dataset.mmhtRange || "");
+    const action = foundry.utils.escapeHTML(t.dataset.mmhtAction || "");
+    const trigger = foundry.utils.escapeHTML(t.dataset.mmhtTrigger || "");
+    const duration = foundry.utils.escapeHTML(t.dataset.mmhtDuration || "");
+    const cost = foundry.utils.escapeHTML(t.dataset.mmhtCost || "");
+
+    const desc = MMHT._htmlToText(t.dataset.mmhtDesc || "");
+    const effect = MMHT._htmlToText(t.dataset.mmhtEffect || "");
+
+    const i18n = (k) => game.i18n.localize(k);
+    const chunks = [];
+
+    // Title (inline styles)
+    if (title) chunks.push(`<div style="font-weight:700;font-size:16px;margin:0 0 12px 0;line-height:1.45;">${title}</div>`);
+
+    // Description & Effect first, with spacing
+    if (desc) {
+      chunks.push(`<div style="font-weight:700;font-size:15px;margin:10px 0 6px 0;">${i18n("MMHT.Tooltip.Description")}</div>`);
+      chunks.push(`<div style="margin:0 0 10px 0;white-space:pre-wrap;word-break:break-word;">${foundry.utils.escapeHTML(desc)}</div>`);
+    }
+    if (effect) {
+      chunks.push(`<div style="font-weight:700;font-size:15px;margin:10px 0 6px 0;">${i18n("MMHT.Tooltip.Effect")}</div>`);
+      chunks.push(`<div style="margin:0 0 12px 0;white-space:pre-wrap;word-break:break-word;">${foundry.utils.escapeHTML(effect)}</div>`);
+    }
+
+    // KV rows with inline styles
+    const kv = [
+      [i18n("MMHT.Tooltip.Cost"), cost],
+      [i18n("MMHT.Tooltip.Range"), range],
+      [i18n("MMHT.Tooltip.Action"), action],
+      [i18n("MMHT.Tooltip.Trigger"), trigger],
+      [i18n("MMHT.Tooltip.Duration"), duration]
+    ];
+    for (const [k,v] of kv) if (v) {
+      chunks.push(`<div style="margin:8px 0;"><strong style="font-weight:700;font-size:15px;">${k}:</strong> ${v}</div>`);
+    }
+
+    if (!chunks.length) return;
+    MMHT._tooltipEl.innerHTML = `<div>${chunks.join("")}</div>`;
+    MMHT._tooltipEl.style.display = "block";
+  }
+
+  static _onOut(ev){
+    if (!MMHT._tooltipEl) return;
+    const rel = ev.relatedTarget;
+    if (rel && MMHT._tooltipEl.contains(rel)) return;
+    MMHT._tooltipEl.style.display = "none";
+  }
+}
+
+Hooks.once("init", MMHT.init);
+Hooks.once("ready", MMHT.ready);
