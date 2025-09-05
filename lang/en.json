@@ -1,18 +1,27 @@
 {
-  "MMHT.Settings.Enable": "Enable hover tooltips",
-  "MMHT.Settings.SystemId": "Target system id",
-  "MMHT.Settings.Types": "Enable types",
-  "MMHT.Settings.Types.Power": "Powers",
-  "MMHT.Settings.Types.Trait": "Traits",
-  "MMHT.Settings.Types.Tag": "Tags",
-  "MMHT.Settings.Types.Occupation": "Occupations",
-  "MMHT.Settings.Types.Origin": "Origins",
-  "MMHT.Settings.Types.Item": "Generic Items",
-  "MMHT.Tooltip.Action": "Action",
-  "MMHT.Tooltip.Trigger": "Trigger",
-  "MMHT.Tooltip.Duration": "Duration",
-  "MMHT.Tooltip.Cost": "Cost",
-  "MMHT.Tooltip.Range": "Range",
-  "MMHT.Tooltip.Effect": "Effect",
-  "MMHT.Tooltip.Description": "Description"
+  "MMHT": {
+    "Settings": {
+      "Enable": "Enable hover tooltips",
+      "SystemId": "Target system id",
+      "TypesLabel": "Enable types",
+      "Types": {
+        "Power": "Powers",
+        "Trait": "Traits",
+        "Tag": "Tags",
+        "Occupation": "Occupations",
+        "Origin": "Origins",
+        "Item": "Generic Items"
+      }
+    },
+    "Tooltip": {
+      "Title": "Details",
+      "Cost": "Cost",
+      "Range": "Range",
+      "Action": "Action",
+      "Trigger": "Trigger",
+      "Duration": "Duration",
+      "Description": "Description",
+      "Effect": "Effect"
+    }
+  }
 }
