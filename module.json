@@ -1,28 +1,25 @@
 {
   "id": "marvel-multiverse-hover-tooltips",
-  "title": "Marvel Multiverse Hover Tooltips",
-  "description": "Adiciona tooltips ao sistema Marvel Multiverse RPG no Foundry VTT.",
-  "version": "1.0.10",
-  "compatibility": {
-    "minimum": "12",
-    "verified": "13",
-    "maximum": "13"
-  },
+  "title": "Marvel Multiverse — Hover Tooltips",
+  "description": "Tipografia com estilos inline (título 16px, espaçamentos) e limpeza de HTML.",
+  "version": "1.0.17",
   "authors": [
     {
-      "name": "Rodrigo Sinistro",
-      "url": "https://github.com/rodrigosinistro"
+      "name": "Rodrigo Sinistro"
+    },
+    {
+      "name": "ChatGPT (assistente)"
     }
   ],
   "url": "https://github.com/rodrigosinistro/marvel-multiverse-hover-tooltips",
-  "license": "MIT",
-  "readme": "README.md",
-  "minimumCoreVersion": "11",
+  "manifest": "https://raw.githubusercontent.com/rodrigosinistro/marvel-multiverse-hover-tooltips/main/module.json",
+  "download": "https://github.com/rodrigosinistro/marvel-multiverse-hover-tooltips/releases/download/1.0.17/marvel-multiverse-hover-tooltips-1.0.17.zip",
+  "compatibility": {
+    "minimum": "13",
+    "verified": "13"
+  },
   "esmodules": [
     "scripts/hover-tooltips.js"
-  ],
-  "styles": [
-    "styles/hover-tooltips.css"
   ],
   "languages": [
     {
@@ -35,13 +32,5 @@
       "name": "Português (Brasil)",
       "path": "lang/pt-BR.json"
     }
-  ],
-  "flags": {
-    "mmHoverTooltips": {
-      "system": "marvel-multiverse"
-    }
-  },
-  "manifestPlusVersion": 2,
-  "manifest": "https://raw.githubusercontent.com/rodrigosinistro/marvel-multiverse-hover-tooltips/main/module.json",
-  "download": "https://github.com/rodrigosinistro/marvel-multiverse-hover-tooltips/releases/download/v1.0.10/marvel-multiverse-hover-tooltips-1.0.10.zip"
+  ]
 }
