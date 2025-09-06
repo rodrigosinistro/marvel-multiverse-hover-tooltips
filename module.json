@@ -2,7 +2,7 @@
   "id": "marvel-multiverse-hover-tooltips",
   "title": "Marvel Multiverse — Hover Tooltips",
   "description": "Tipografia com estilos inline (título 16px, espaçamentos) e limpeza de HTML.",
-  "version": "1.0.17",
+  "version": "1.0.18",
   "authors": [
     {
       "name": "Rodrigo Sinistro"
@@ -13,7 +13,7 @@
   ],
   "url": "https://github.com/rodrigosinistro/marvel-multiverse-hover-tooltips",
   "manifest": "https://raw.githubusercontent.com/rodrigosinistro/marvel-multiverse-hover-tooltips/main/module.json",
-  "download": "https://github.com/rodrigosinistro/marvel-multiverse-hover-tooltips/releases/download/1.0.17/marvel-multiverse-hover-tooltips-1.0.17.zip",
+  "download": "https://github.com/rodrigosinistro/marvel-multiverse-hover-tooltips/releases/download/1.0.18/marvel-multiverse-hover-tooltips-1.0.18.zip",
   "compatibility": {
     "minimum": "13",
     "verified": "13"
