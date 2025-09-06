@@ -1,5 +1,5 @@
 const MODULE_ID = "marvel-multiverse-hover-tooltips";
-const MODULE_VER = "1.0.17";
+const MODULE_VER = "1.0.18";
 const SETTINGS = { ENABLE:"enable", SYSTEM_ID:"systemId", TYPES:"types" };
 
 const DEFAULT_TYPES = { Power:true, Trait:true, Tag:true, Occupation:true, Origin:true, Item:true };
@@ -177,20 +177,23 @@ class MMHT {
 
   static _onHover(ev){
     const t = ev.target;
-    if (!(t instanceof HTMLElement)) return;
+    // Allow hovering anywhere inside the row: climb to closest parent with our dataset
+    const node = (t instanceof HTMLElement) ? t.closest('[data-mmht-type]') : null;
 
-    const type = t.dataset.mmhtType;
+    if (!node) return;
+
+    const type = node?.dataset?.mmhtType;
     if (!type || MMHT._types[type] !== true) return;
 
-    const title = foundry.utils.escapeHTML(t.dataset.mmhtTitle || "");
-    const range = foundry.utils.escapeHTML(t.dataset.mmhtRange || "");
-    const action = foundry.utils.escapeHTML(t.dataset.mmhtAction || "");
-    const trigger = foundry.utils.escapeHTML(t.dataset.mmhtTrigger || "");
-    const duration = foundry.utils.escapeHTML(t.dataset.mmhtDuration || "");
-    const cost = foundry.utils.escapeHTML(t.dataset.mmhtCost || "");
+    const title = foundry.utils.escapeHTML(node?.dataset?.mmhtTitle || "");
+    const range = foundry.utils.escapeHTML(node?.dataset?.mmhtRange || "");
+    const action = foundry.utils.escapeHTML(node?.dataset?.mmhtAction || "");
+    const trigger = foundry.utils.escapeHTML(node?.dataset?.mmhtTrigger || "");
+    const duration = foundry.utils.escapeHTML(node?.dataset?.mmhtDuration || "");
+    const cost = foundry.utils.escapeHTML(node?.dataset?.mmhtCost || "");
 
-    const desc = MMHT._htmlToText(t.dataset.mmhtDesc || "");
-    const effect = MMHT._htmlToText(t.dataset.mmhtEffect || "");
+    const desc = MMHT._htmlToText(node?.dataset?.mmhtDesc || "");
+    const effect = MMHT._htmlToText(node?.dataset?.mmhtEffect || "");
 
     const i18n = (k) => game.i18n.localize(k);
     const chunks = [];
